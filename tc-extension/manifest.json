@@ -4,7 +4,7 @@
   "version": "1.0",
   "permissions": ["activeTab", "scripting"],
   "host_permissions": [
-    "https://your-app.vercel.app/*"
+    "https://tc-buzz.vercel.app/*"
   ],
   "action": {
     "default_popup": "popup.html"
