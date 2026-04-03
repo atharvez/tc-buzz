@@ -1,67 +1,46 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-interface AnalyzeRequest {
-  text: string;
-}
-
-interface AnalyzeResponse {
-  summary: string;
-  risks: string[];
-  rating: string;
-}
-
 export async function POST(req: Request): Promise<Response> {
   try {
-    const body: AnalyzeRequest = await req.json();
-    const { text } = body;
+    const { text } = await req.json();
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.HF_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          inputs: `
+Summarize this Terms and Conditions.
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-    });
-
-    const prompt = `
-Analyze this Terms and Conditions.
-
-Return ONLY JSON:
-{
-  "summary": "...",
-  "risks": ["...", "..."],
-  "rating": "Safe | Moderate | Risky"
-}
+Give:
+- Summary
+- Risks
+- Rating
 
 Text:
-${text.slice(0, 5000)}
-`;
+${text.slice(0, 2000)}
+`
+        })
+      }
+    );
 
-    const result = await model.generateContent(prompt);
-    const output = await result.response.text();
+    const data = await response.json();
 
-    let parsed: AnalyzeResponse;
+    const output = data?.[0]?.generated_text || "No response";
 
-    try {
-      parsed = JSON.parse(output);
-    } catch {
-      parsed = {
-        summary: output,
-        risks: [],
-        rating: "Unknown",
-      };
-    }
-
-    return new Response(JSON.stringify(parsed), {
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
+    return new Response(JSON.stringify({
+      summary: output,
+      risks: [],
+      rating: "Unknown"
+    }));
 
   } catch (error) {
     return new Response(JSON.stringify({
-      summary: "Error processing request",
+      summary: "Error",
       risks: [],
       rating: "Error"
-    }), { status: 500 });
+    }));
   }
 }
